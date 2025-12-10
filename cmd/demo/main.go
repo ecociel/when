@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"github.com/ecociel/when/domain"
 	"github.com/ecociel/when/gateway/kafka"
 	"github.com/ecociel/when/repos/sql"
 	"github.com/ecociel/when/uc"
@@ -27,9 +28,17 @@ func main() {
 
 	_ = kafka.NewPublisher(kClient, "")
 
-	uc.MakeScheduleUseCase(store)
+	scheduleTask := uc.MakeScheduleUseCase(store)
 	uc.MakePauseUseCase(store)
 	uc.MakeUnPauseUseCase(store)
 	uc.MakeRescheduleUseCase(store)
+
+	task := &domain.Task{}
+
+	taskId, err := scheduleTask(ctx, task)
+	if err != nil {
+		log.Fatal(err)
+	}
+	log.Printf("task ID: %d", taskId)
 
 }

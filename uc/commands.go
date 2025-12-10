@@ -1,37 +1,41 @@
 package uc
 
-import "context"
+import (
+	"context"
+	"github.com/ecociel/when/domain"
+	"time"
+)
 
 //TODO Need rework
 
 type Writer interface {
-	Insert(ctx context.Context, kind string, event any) error
-	Pause(ctx context.Context, kind string, event any) error
-	UnPause(ctx context.Context, kind string, event any) error
-	Reschedule(ctx context.Context, kind string, event any) error
+	Insert(ctx context.Context, t *domain.Task) (int64, error)
+	Pause(ctx context.Context, id int64) error
+	UnPause(ctx context.Context, id int64) error
+	Reschedule(ctx context.Context, id int64, when time.Time) error
 }
-type ScheduleUseCase = func(ctx context.Context, kind string, event any) error
-type PauseUseCase = func(ctx context.Context, kind string, event any) error
-type UnPauseUseCase = func(ctx context.Context, kind string, event any) error
-type RescheduleUseCase = func(ctx context.Context, kind string, event any) error
+type ScheduleUseCase = func(ctx context.Context, t *domain.Task) (int64, error)
+type PauseUseCase = func(ctx context.Context, id int64) error
+type UnPauseUseCase = func(ctx context.Context, id int64) error
+type RescheduleUseCase = func(ctx context.Context, id int64, when time.Time) error
 
 func MakeScheduleUseCase(w Writer) ScheduleUseCase {
-	return func(ctx context.Context, kind string, event any) error {
-		return w.Insert(ctx, kind, event)
+	return func(ctx context.Context, t *domain.Task) (int64, error) {
+		return w.Insert(ctx, t)
 	}
 }
 func MakePauseUseCase(w Writer) PauseUseCase {
-	return func(ctx context.Context, kind string, event any) error {
-		return w.Pause(ctx, kind, event)
+	return func(ctx context.Context, id int64) error {
+		return w.Pause(ctx, id)
 	}
 }
 func MakeUnPauseUseCase(w Writer) UnPauseUseCase {
-	return func(ctx context.Context, kind string, event any) error {
-		return w.UnPause(ctx, kind, event)
+	return func(ctx context.Context, id int64) error {
+		return w.UnPause(ctx, id)
 	}
 }
 func MakeRescheduleUseCase(w Writer) RescheduleUseCase {
-	return func(ctx context.Context, kind string, event any) error {
-		return w.Reschedule(ctx, kind, event)
+	return func(ctx context.Context, id int64, when time.Time) error {
+		return w.Reschedule(ctx, id, when)
 	}
 }
