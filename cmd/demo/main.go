@@ -21,11 +21,15 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
+	defer kClient.Close()
 
 	store := sql.NewPostgresRepo(pool)
 
 	_ = kafka.NewPublisher(kClient, "")
 
 	uc.MakeScheduleUseCase(store)
+	uc.MakePauseUseCase(store)
+	uc.MakeUnPauseUseCase(store)
+	uc.MakeRescheduleUseCase(store)
 
 }
