@@ -6,6 +6,7 @@ import (
 	"github.com/ecociel/when/domain"
 	"github.com/ecociel/when/gateway/kafka"
 	"github.com/ecociel/when/repos/sql"
+	"github.com/ecociel/when/runner"
 	"github.com/ecociel/when/uc"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/twmb/franz-go/pkg/kgo"
@@ -46,7 +47,9 @@ func main() {
 	uc.MakePauseUseCase(store)
 	uc.MakeUnPauseUseCase(store)
 	uc.MakeRescheduleUseCase(store)
-	uc.MakeProcessDueTasksUseCase(store, publisher)
+	process := uc.MakeProcessDueTasksUseCase(store, publisher)
+
+	go runner.NewRunner(process, 100, 2*time.Second).Run(ctx)
 
 	task := &domain.Task{
 		Topic:   "email.send",
