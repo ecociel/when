@@ -18,7 +18,8 @@ func NewPostgresRepo(pool *pgxpool.Pool) *PostgresRepo {
 }
 
 func (repo *PostgresRepo) Insert(ctx context.Context, t *domain.Task) (int64, error) {
-	const q = `INSERT INTO scheduled_tasks (topic, key, payload, run_at, paused) VALUES ($1, $2, $3, $4, $5)
+	const q = `INSERT INTO scheduled_tasks (topic, key, payload, run_at, paused, external_key, triggered)
+VALUES ($1, $2, $3, $4, $5, $6, $7)
 RETURNING id;
 `
 	var payloadObj map[string]any
@@ -26,7 +27,7 @@ RETURNING id;
 		return 0, fmt.Errorf("serialize payload: %w", err)
 	}
 	var id int64
-	err := repo.pool.QueryRow(ctx, q, t.Topic, t.Key, t.Payload, t.RunAt, t.Paused).Scan(&id)
+	err := repo.pool.QueryRow(ctx, q, t.Topic, t.Key, t.Payload, t.RunAt, t.Paused, t.ExternalKey, t.Triggered).Scan(&id)
 	if err != nil {
 		return 0, fmt.Errorf("insert task: %w", err)
 	}
