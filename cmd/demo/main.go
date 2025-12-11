@@ -26,12 +26,13 @@ func main() {
 
 	store := sql.NewPostgresRepo(pool)
 
-	_ = kafka.NewPublisher(kClient, "")
+	publisher := kafka.NewPublisher(kClient, "")
 
 	scheduleTask := uc.MakeScheduleUseCase(store)
 	uc.MakePauseUseCase(store)
 	uc.MakeUnPauseUseCase(store)
 	uc.MakeRescheduleUseCase(store)
+	uc.MakeProcessDueTasksUseCase(store, publisher)
 
 	task := &domain.Task{}
 

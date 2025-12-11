@@ -2,7 +2,6 @@ package kafka
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"github.com/twmb/franz-go/pkg/kgo"
 )
@@ -10,21 +9,25 @@ import (
 const Kind = "kind"
 
 type Publisher struct {
-	client *kgo.Client
-	topic  string
+	client       *kgo.Client
+	defaultTopic string
 }
 
 func NewPublisher(client *kgo.Client, topic string) *Publisher {
-	return &Publisher{client: client, topic: topic}
+	return &Publisher{client: client, defaultTopic: topic}
 }
 
-func (p *Publisher) Publish(ctx context.Context, kind string, event any) error {
-	data, err := json.Marshal(event)
-	if err != nil {
-		return fmt.Errorf("serialize event: %w\n", err)
+func (p *Publisher) PublishSync(ctx context.Context, topic string, key []byte, value []byte) error {
+	//data, err := json.Marshal(event)
+	//if err != nil {
+	//	return fmt.Errorf("serialize event: %w\n", err)
+	//}
+	t := topic
+	if t == "" {
+		t = p.defaultTopic
 	}
-	headers := []kgo.RecordHeader{{Key: Kind, Value: []byte(kind)}}
-	record := &kgo.Record{Topic: p.topic, Headers: headers, Value: data}
+	// headers := []kgo.RecordHeader{{Key: Kind, Value: key}}
+	record := &kgo.Record{Topic: t, Key: key, Value: value}
 	if err := p.client.ProduceSync(ctx, record).FirstErr(); err != nil {
 		return fmt.Errorf("publish event: %w\n", err)
 	}

@@ -47,3 +47,18 @@ func (repo *PostgresRepo) Reschedule(ctx context.Context, id int64, when time.Ti
 	//TODO implement me
 	panic("implement me")
 }
+
+func (repo *PostgresRepo) ClaimDueTasks(ctx context.Context, now time.Time, limit int) ([]domain.Task, error) {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (repo *PostgresRepo) DeleteTaskByID(ctx context.Context, id int64) error {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (repo *PostgresRepo) RevertTaskToPending(ctx context.Context, id int64, nextRunAt time.Time) error {
+	//TODO implement me
+	panic("implement me")
+}
