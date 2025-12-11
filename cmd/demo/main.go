@@ -16,7 +16,7 @@ import (
 func main() {
 	ctx := context.Background()
 
-	pool, err := pgxpool.New(ctx, "postgres://scheduler:scheduler@localhost:5432/scheduler?sslmode=disable")
+	pool, err := pgxpool.New(ctx, "postgres://scheduler:scheduler@localhost:5432/postgres?sslmode=disable")
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -25,6 +25,12 @@ func main() {
 	}
 
 	fmt.Println("✅ Connected to Postgres successfully!")
+
+	var dbName string
+	if err := pool.QueryRow(ctx, "SELECT current_database()").Scan(&dbName); err != nil {
+		log.Fatalf("cannot query current_database: %v", err)
+	}
+	log.Println("Connected to DB:", dbName)
 
 	kClient, err := kgo.NewClient(kgo.SeedBrokers("localhost:9092"))
 	if err != nil {
