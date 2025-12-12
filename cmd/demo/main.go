@@ -22,16 +22,10 @@ func main() {
 		log.Fatal(err)
 	}
 	if err := pool.Ping(ctx); err != nil {
-		log.Fatalf("❌ Unable to connect to Postgres: %v", err)
+		log.Fatalf("Unable to connect to Postgres: %v", err)
 	}
 
-	fmt.Println("✅ Connected to Postgres successfully!")
-
-	var dbName string
-	if err := pool.QueryRow(ctx, "SELECT current_database()").Scan(&dbName); err != nil {
-		log.Fatalf("cannot query current_database: %v", err)
-	}
-	log.Println("Connected to DB:", dbName)
+	fmt.Println("Connected to Postgres successfully!")
 
 	kClient, err := kgo.NewClient(kgo.SeedBrokers("localhost:9092"))
 	if err != nil {
