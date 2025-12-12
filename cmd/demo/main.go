@@ -56,5 +56,5 @@ func main() {
 		log.Fatal(err)
 	}
 	log.Printf("task ID: %d", taskId)
-
+	select {}
 }

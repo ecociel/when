@@ -3,6 +3,7 @@ package uc
 import (
 	"context"
 	"github.com/ecociel/when/domain"
+	"github.com/emicklei/go-restful/v3/log"
 	"time"
 )
 
@@ -30,6 +31,7 @@ func MakeProcessDueTasksUseCase(
 		if err != nil {
 			return err
 		}
+		log.Printf("ClaimDueTasks: %v", tasks)
 
 		for _, t := range tasks {
 			var key []byte
@@ -39,10 +41,14 @@ func MakeProcessDueTasksUseCase(
 
 			if err := publisher.PublishSync(ctx, t.Topic, key, t.Payload); err != nil {
 				_ = store.RevertTaskToPending(ctx, t.ID, now.Add(time.Minute))
+				log.Printf("reverting task %v: %v", t.ID, err)
 				continue
 			}
 			//TODO
-			_ = store.DeleteTaskByID(ctx, t.ID)
+			err = store.DeleteTaskByID(ctx, t.ID)
+			if err != nil {
+				log.Printf("deleting task %v: %v", t.ID, err)
+			}
 		}
 		return nil
 	}

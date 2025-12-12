@@ -8,3 +8,10 @@ A small Go library for scheduling asynchronous tasks using **Postgres** + **Kafk
 
 ```bash
 go get github.com/you/when
+```
+
+
+### Create topic explicitly
+```
+docker exec -it scheduler-kafka /opt/kafka/bin/kafka-topics.sh --bootstrap-server localhost:9092 --create --topic email.send --partitions 1 --replication-factor 1
+```
