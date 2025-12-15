@@ -38,17 +38,15 @@ func main() {
 	publisher := kafka.NewPublisher(kClient, "")
 
 	scheduleTask := uc.MakeScheduleUseCase(store)
-	uc.MakePauseUseCase(store)
-	uc.MakeUnPauseUseCase(store)
-	uc.MakeRescheduleUseCase(store)
+
 	process := uc.MakeProcessDueTasksUseCase(store, publisher)
 
-	go runner.NewRunner(process, 100, 2*time.Second).Run(ctx)
+	go runner.NewRunner(process, 100, 10*time.Second).Run(ctx)
 
 	task := &domain.Task{
 		Topic:   "email.send",
 		Payload: []byte(`{"email":"user@example.com","subject":"Hello"}`),
-		RunAt:   time.Now().Add(10 * time.Second),
+		RunAt:   time.Now().Add(5 * time.Second),
 	}
 
 	taskId, err := scheduleTask(ctx, task)

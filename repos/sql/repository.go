@@ -35,20 +35,20 @@ RETURNING id;
 	return id, err
 }
 
-func (repo *PostgresRepo) Pause(ctx context.Context, id int64) error {
-	//TODO implement me
-	panic("implement me")
-}
-
-func (repo *PostgresRepo) UnPause(ctx context.Context, id int64) error {
-	//TODO implement me
-	panic("implement me")
-}
-
-func (repo *PostgresRepo) Reschedule(ctx context.Context, id int64, when time.Time) error {
-	//TODO implement me
-	panic("implement me")
-}
+//func (repo *PostgresRepo) Pause(ctx context.Context, id int64) error {
+//	//TODO implement me
+//	panic("implement me")
+//}
+//
+//func (repo *PostgresRepo) UnPause(ctx context.Context, id int64) error {
+//	//TODO implement me
+//	panic("implement me")
+//}
+//
+//func (repo *PostgresRepo) Reschedule(ctx context.Context, id int64, when time.Time) error {
+//	//TODO implement me
+//	panic("implement me")
+//}
 
 func (repo *PostgresRepo) ClaimDueTasks(ctx context.Context, now time.Time, limit int) ([]domain.Task, error) {
 	const q = `WITH due AS(
@@ -84,10 +84,6 @@ UPDATE scheduled_tasks t SET status = 'publishing', updated_at = now() FROM due 
 		if err := rows.Scan(&id, &topic, &key, &payload, &runAt, &paused, &ext, &triggered, &status); err != nil {
 			return nil, err
 		}
-		//data, err := json.Marshal(payloadObj)
-		//if err != nil {
-		//	return nil, err
-		//}
 		tasks = append(tasks, domain.Task{
 			ID:          id,
 			Topic:       topic,
