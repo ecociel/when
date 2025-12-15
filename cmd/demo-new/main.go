@@ -168,3 +168,5 @@ func main() {
 	<-ctx.Done()
 	log.Println("shutting down")
 }
+
+// partitions need to be decided by id

@@ -44,7 +44,8 @@ func MakeProcessDueTasksUseCase(
 				log.Printf("reverting task %v: %v", t.ID, err)
 				continue
 			}
-			//TODO
+			//TODO wht if delete fail?
+			// what if worker dies in between?
 			err = store.DeleteTaskByID(ctx, t.ID)
 			if err != nil {
 				log.Printf("deleting task %v: %v", t.ID, err)
