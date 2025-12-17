@@ -52,9 +52,9 @@ RETURNING id;
 
 func (repo *PostgresRepo) ClaimDueTasks(ctx context.Context, now time.Time, limit int) ([]domain.Task, error) {
 	const q = `WITH due AS(
-SELECT id FROM scheduled_tasks WHERE status = 'pending' AND run_at < $1 AND paused = FALSE AND (external_key IS NULL OR triggered = TRUE) 
+SELECT id FROM scheduled_tasks WHERE state = 'pending' AND run_at < $1 AND paused = FALSE AND (external_key IS NULL OR triggered = TRUE) 
 ORDER BY run_at FOR UPDATE SKIP LOCKED LIMIT $2)
-UPDATE scheduled_tasks t SET status = 'publishing', updated_at = now() FROM due WHERE t.id = due.id RETURNING t.id, t.topic, t.key, t.payload, t.run_at, t.paused, t.external_key, t.triggered, t.status;`
+UPDATE scheduled_tasks t SET state = 'publishing', publishing_at = now(), updated_at = now() FROM due WHERE t.id = due.id RETURNING t.id, t.topic, t.key, t.payload, t.run_at, t.paused, t.external_key, t.triggered, t.state, t.publish_attempts;`
 
 	tx, err := repo.pool.BeginTx(ctx, pgx.TxOptions{})
 	if err != nil {
@@ -70,31 +70,11 @@ UPDATE scheduled_tasks t SET status = 'publishing', updated_at = now() FROM due 
 
 	var tasks []domain.Task
 	for rows.Next() {
-		var (
-			id        int64
-			topic     string
-			key       *string
-			payload   []byte
-			runAt     time.Time
-			paused    bool
-			ext       *string
-			triggered bool
-			status    string
-		)
-		if err := rows.Scan(&id, &topic, &key, &payload, &runAt, &paused, &ext, &triggered, &status); err != nil {
+		var t domain.Task
+		if err := rows.Scan(&t.ID, &t.Topic, &t.Key, &t.Payload, &t.RunAt, &t.Paused, &t.ExternalKey, &t.Triggered, &t.State, &t.PublishAttempts); err != nil {
 			return nil, err
 		}
-		tasks = append(tasks, domain.Task{
-			ID:          id,
-			Topic:       topic,
-			Key:         key,
-			Payload:     payload,
-			RunAt:       runAt,
-			Paused:      paused,
-			ExternalKey: ext,
-			Triggered:   triggered,
-			Status:      domain.Status(status),
-		})
+		tasks = append(tasks, t)
 	}
 	if err := rows.Err(); err != nil {
 		return nil, err

@@ -2,12 +2,12 @@ package domain
 
 import "time"
 
-type Status string
+type TaskState string
 
 const (
-	StatusPending    Status = "pending"
-	StatusPublishing Status = "publishing"
-	StatePublished   Status = "published"
+	StatusPending    TaskState = "pending"
+	StatusPublishing TaskState = "publishing"
+	StatePublished   TaskState = "published"
 )
 
 type Task struct {
@@ -19,6 +19,6 @@ type Task struct {
 	Paused          bool
 	ExternalKey     *string
 	Triggered       bool
-	Status          Status
+	State           TaskState
 	PublishAttempts int
 }
