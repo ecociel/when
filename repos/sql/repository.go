@@ -101,12 +101,14 @@ func (repo *PostgresRepo) RevertTaskToPending(ctx context.Context, id int64, nex
 }
 
 func (repo *PostgresRepo) MarkPublished(ctx context.Context, id int64) error {
-	//TODO implement me
-	panic("implement me")
+	const q = `UPDATE scheduled_tasks SET state = 'published', published_at = now(), last_publish_error = NULL, updated_at = now() WHERE id = $1 AND state = 'publishing';`
+	_, err := repo.pool.Exec(ctx, q, id)
+	return err
 }
-func (repo *PostgresRepo) MarkPublishFailed(ctx context.Context, id int64) error {
-	//TODO implement me
-	panic("implement me")
+func (repo *PostgresRepo) MarkPublishFailed(ctx context.Context, id int64, errMsg string, nextRunAt time.Time) error {
+	const q = `UPDATE scheduled_tasks SET state = 'pending', publish_attempts = publish_attempts + 1, last_publish_error = $2, run_at = $3, updated_at = now() WHERE id = $1 AND state = 'publishing';`
+	_, err := repo.pool.Exec(ctx, q, id, errMsg, nextRunAt)
+	return err
 }
 
 func (repo *PostgresRepo) ResetStuckPublished(ctx context.Context, id int64) error {

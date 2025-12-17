@@ -2,10 +2,9 @@ package uc
 
 import (
 	"context"
-	"fmt"
 	"github.com/ecociel/when/domain"
 	"github.com/emicklei/go-restful/v3/log"
-	"math"
+	"strconv"
 	"time"
 )
 
@@ -28,7 +27,7 @@ type DueTaskStore interface {
 
 	MarkPublished(ctx context.Context, id int64) error
 
-	MarkPublishFailed(ctx context.Context, id int64) error
+	MarkPublishFailed(ctx context.Context, id int64, errMsg string, nextRunAt time.Time) error
 
 	// ResetStuckPublished TODO for may be crash recovery
 	ResetStuckPublished(ctx context.Context, id int64) error
@@ -57,45 +56,43 @@ func MakeProcessDueTasksUseCase(
 			}
 
 			headers := map[string][]byte{
-				"scheduler_task_id": []byte(int64ToString(t.ID)),
+				"scheduler_task_id": []byte(strconv.FormatInt(t.ID, 10)),
 			}
 
 			if err := publisher.PublishSync(ctx, t.Topic, key, t.Payload, headers); err != nil {
-				now.Add(backoff(t.PublishAttempts + 1))
-				err := store.MarkPublishFailed(ctx, t.ID)
+				next := now.Add(backoff(t.PublishAttempts + 1))
+				err := store.MarkPublishFailed(ctx, t.ID, err.Error(), next)
 				if err != nil {
 					return err
 				}
-				//_ = store.RevertTaskToPending(ctx, t.ID, now.Add(time.Minute))
 				log.Printf("reverting task %v: %v", t.ID, err)
 				continue
 			}
-			//TODO wht if delete fail?
-			// what if worker dies in between?
 			err := store.MarkPublished(ctx, t.ID)
 			if err != nil {
 				return err
 			}
 
-			if mode == CompletionMarkPublished {
+			if mode == CompletionDelete {
 				err := store.DeleteTaskByID(ctx, t.ID)
 				if err != nil {
 					return err
 				}
 			}
-			//	err = store.DeleteTaskByID(ctx, t.ID)
-			//	if err != nil {
-			//		log.Printf("deleting task %v: %v", t.ID, err)
-			//	}
 		}
 		return nil
 	}
 }
 
 func backoff(attempt int) time.Duration {
-	return time.Duration(math.Pow(2, float64(attempt))) * time.Second
-}
-
-func int64ToString(id int64) []byte {
-	return []byte(fmt.Sprintf("%d", id))
+	switch attempt {
+	case 1:
+		return 5 * time.Second
+	case 2:
+		return 15 * time.Second
+	case 3:
+		return 1 * time.Minute
+	default:
+		return 5 * time.Minute
+	}
 }
