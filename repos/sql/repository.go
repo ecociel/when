@@ -119,3 +119,16 @@ func (repo *PostgresRepo) RevertTaskToPending(ctx context.Context, id int64, nex
 	}
 	return nil
 }
+
+func (repo *PostgresRepo) MarkPublished(ctx context.Context, id int64) error {
+	//TODO implement me
+	panic("implement me")
+}
+func (repo *PostgresRepo) MarkPublishFailed(ctx context.Context, id int64) error {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (repo *PostgresRepo) ResetStuckPublished(ctx context.Context, id int64) error {
+	panic("implement me")
+}

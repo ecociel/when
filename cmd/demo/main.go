@@ -39,7 +39,7 @@ func main() {
 
 	scheduleTask := uc.MakeScheduleUseCase(store)
 
-	process := uc.MakeProcessDueTasksUseCase(store, publisher)
+	process := uc.MakeProcessDueTasksUseCase(store, publisher, uc.CompletionMarkPublished)
 
 	go runner.NewRunner(process, 100, 10*time.Second).Run(ctx)
 

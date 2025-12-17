@@ -15,7 +15,7 @@ func NewPublisher(client *kgo.Client, topic string) *Publisher {
 	return &Publisher{client: client, defaultTopic: topic}
 }
 
-func (p *Publisher) PublishSync(ctx context.Context, topic string, key []byte, value []byte) error {
+func (p *Publisher) PublishSync(ctx context.Context, topic string, key []byte, value []byte, headers map[string][]byte) error {
 	t := topic
 	if t == "" {
 		t = p.defaultTopic
