@@ -21,6 +21,9 @@ func (p *Publisher) PublishSync(ctx context.Context, topic string, key []byte, v
 		t = p.defaultTopic
 	}
 	record := &kgo.Record{Topic: t, Key: key, Value: value}
+	for k, v := range headers {
+		record.Headers = append(record.Headers, kgo.RecordHeader{Key: k, Value: v})
+	}
 	if err := p.client.ProduceSync(ctx, record).FirstErr(); err != nil {
 		return fmt.Errorf("publish event: %w\n", err)
 	}
