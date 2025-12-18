@@ -111,6 +111,11 @@ func (repo *PostgresRepo) MarkPublishFailed(ctx context.Context, id int64, errMs
 	return err
 }
 
-func (repo *PostgresRepo) ResetStuckPublished(ctx context.Context, id int64) error {
-	panic("implement me")
+func (repo *PostgresRepo) ResetStuckPublished(ctx context.Context, olderThan time.Duration) (int64, error) {
+	const q = `UPDATE scheduled_tasks SET state = 'pending', updated_at = now() WHERE state = 'publishing' AND publishing_at IS NOT NULL AND published_at < now() - ($1::interval);`
+	ct, err := repo.pool.Exec(ctx, q, olderThan.String())
+	if err != nil {
+		return 0, err
+	}
+	return ct.RowsAffected(), nil
 }

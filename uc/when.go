@@ -30,7 +30,7 @@ type DueTaskStore interface {
 	MarkPublishFailed(ctx context.Context, id int64, errMsg string, nextRunAt time.Time) error
 
 	// ResetStuckPublished TODO for may be crash recovery
-	ResetStuckPublished(ctx context.Context, id int64) error
+	ResetStuckPublished(ctx context.Context, olderThan time.Duration) (int64, error)
 }
 
 type ProcessDueTasksUseCase = func(ctx context.Context, limit int) error

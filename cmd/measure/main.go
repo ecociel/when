@@ -20,7 +20,7 @@ func main() {
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt)
 	defer stop()
 
-	pool, err := pgxpool.New(ctx, "postgres://scheduler:scheduler@localhost:5432/scheduler?sslmode=disable")
+	pool, err := pgxpool.New(ctx, "postgres://scheduler:scheduler@localhost:5432/postgres?sslmode=disable")
 	if err != nil {
 		log.Fatal(err)
 	}

@@ -33,7 +33,7 @@ func main() {
 	kafkaConsumer, _ := kgo.NewClient(
 		kgo.SeedBrokers("localhost:9092"),
 		kgo.ConsumerGroup("explore-event-consumer"),
-		kgo.ConsumeTopics("explore.events"),
+		kgo.ConsumeTopics("tasks.queue"),
 	)
 
 	for {
