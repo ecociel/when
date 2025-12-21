@@ -37,6 +37,8 @@ func main() {
 
 	process := uc.MakeProcessDueTasksUseCase(store, pub, uc.CompletionMarkPublished)
 
+	// Optional: reclaim stuck publishing rows
+	reclaim := uc.MakeReclaimStuckUseCase(store)
 	go func() {
 		t := time.NewTicker(30 * time.Second)
 		defer t.Stop()
@@ -44,15 +46,15 @@ func main() {
 			select {
 			case <-ctx.Done():
 				return
-				//case <-t.C:
-				//	n, err := reclaim(ctx, 2*time.Minute)
-				//	if err != nil {
-				//		log.Printf("reclaim error: %v", err)
-				//		continue
-				//	}
-				//	if n > 0 {
-				//		log.Printf("reclaimed %d stuck tasks", n)
-				//	}
+			case <-t.C:
+				n, err := reclaim(ctx, 2*time.Minute)
+				if err != nil {
+					log.Printf("reclaim error: %v", err)
+					continue
+				}
+				if n > 0 {
+					log.Printf("reclaimed %d stuck tasks", n)
+				}
 			}
 		}
 	}()

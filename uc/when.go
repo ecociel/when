@@ -28,12 +28,11 @@ type DueTaskStore interface {
 	MarkPublished(ctx context.Context, id int64) error
 
 	MarkPublishFailed(ctx context.Context, id int64, errMsg string, nextRunAt time.Time) error
-
-	// ResetStuckPublished TODO for may be crash recovery
-	ResetStuckPublished(ctx context.Context, olderThan time.Duration) (int64, error)
+	ResetStuckPublishing(ctx context.Context, olderThan time.Duration) (int64, error)
 }
 
 type ProcessDueTasksUseCase = func(ctx context.Context, limit int) error
+type ReclaimStuckUseCase = func(ctx context.Context, olderThan time.Duration) (int64, error)
 
 func MakeProcessDueTasksUseCase(
 	store DueTaskStore,
@@ -81,6 +80,12 @@ func MakeProcessDueTasksUseCase(
 			}
 		}
 		return nil
+	}
+}
+
+func MakeReclaimStuckUseCase(store DueTaskStore) ReclaimStuckUseCase {
+	return func(ctx context.Context, olderThan time.Duration) (int64, error) {
+		return store.ResetStuckPublishing(ctx, olderThan)
 	}
 }
 

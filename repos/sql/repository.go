@@ -18,7 +18,7 @@ func NewPostgresRepo(pool *pgxpool.Pool) *PostgresRepo {
 	return &PostgresRepo{pool: pool}
 }
 
-func (repo *PostgresRepo) Insert(ctx context.Context, t *domain.Task) (int64, error) {
+func (repo *PostgresRepo) StoreTask(ctx context.Context, t *domain.Task) (int64, error) {
 	const q = `INSERT INTO scheduled_tasks (topic, key, payload, run_at, paused, external_key, triggered)
 VALUES ($1, $2, $3, $4, $5, $6, $7)
 RETURNING id;
@@ -111,7 +111,7 @@ func (repo *PostgresRepo) MarkPublishFailed(ctx context.Context, id int64, errMs
 	return err
 }
 
-func (repo *PostgresRepo) ResetStuckPublished(ctx context.Context, olderThan time.Duration) (int64, error) {
+func (repo *PostgresRepo) ResetStuckPublishing(ctx context.Context, olderThan time.Duration) (int64, error) {
 	const q = `UPDATE scheduled_tasks SET state = 'pending', updated_at = now() WHERE state = 'publishing' AND publishing_at IS NOT NULL AND published_at < now() - ($1::interval);`
 	ct, err := repo.pool.Exec(ctx, q, olderThan.String())
 	if err != nil {
