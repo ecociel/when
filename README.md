@@ -24,3 +24,9 @@ docker exec -it scheduler-kafka \
   --topic <Topic-Name> \
   --from-beginning
 ```
+
+### For metrics
+
+```
+http://localhost:9090/metrics
+```
