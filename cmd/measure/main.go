@@ -2,7 +2,11 @@ package main
 
 import (
 	"context"
+	"github.com/ecociel/when/metrics"
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"log"
+	"net/http"
 	"os"
 	"os/signal"
 	"time"
@@ -35,7 +39,19 @@ func main() {
 	store := sql.NewPostgresRepo(pool)
 	pub := kafka.NewPublisher(kClient, "")
 
-	process := uc.MakeProcessDueTasksUseCase(store, pub, uc.CompletionMarkPublished)
+	reg := prometheus.NewRegistry()
+	m := metrics.NewPromMetrics(reg)
+
+	go func() {
+		mux := http.NewServeMux()
+		mux.Handle("/metrics", promhttp.HandlerFor(reg, promhttp.HandlerOpts{}))
+		log.Printf("metrics listening on http://localhost%s/metrics", ":9090")
+		if err := http.ListenAndServe(":9090", mux); err != nil {
+			log.Printf("metrics server stopped: %v", err)
+		}
+	}()
+
+	process := uc.MakeProcessDueTasksUseCase(store, pub, uc.CompletionMarkPublished, m)
 
 	// Optional: reclaim stuck publishing rows
 	reclaim := uc.MakeReclaimStuckUseCase(store)
@@ -54,6 +70,7 @@ func main() {
 				}
 				if n > 0 {
 					log.Printf("reclaimed %d stuck tasks", n)
+					m.TasksReclaimed(int(n))
 				}
 			}
 		}

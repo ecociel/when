@@ -3,6 +3,7 @@ package uc
 import (
 	"context"
 	"github.com/ecociel/when/domain"
+	"github.com/ecociel/when/metrics"
 	"github.com/emicklei/go-restful/v3/log"
 	"strconv"
 	"time"
@@ -38,6 +39,7 @@ func MakeProcessDueTasksUseCase(
 	store DueTaskStore,
 	publisher EventPublisher,
 	mode PublishCompletionMode,
+	m metrics.SchedulerMetrics,
 ) ProcessDueTasksUseCase {
 	return func(ctx context.Context, limit int) error {
 		now := time.Now()
@@ -46,9 +48,11 @@ func MakeProcessDueTasksUseCase(
 		if err != nil {
 			return err
 		}
+		m.TaskClaimed(len(tasks))
 		log.Printf("ClaimDueTasks: %v", tasks)
 
 		for _, t := range tasks {
+			start := time.Now()
 			var key []byte
 			if t.Key != nil {
 				key = []byte(*t.Key)
@@ -59,6 +63,7 @@ func MakeProcessDueTasksUseCase(
 			}
 
 			if err := publisher.PublishSync(ctx, t.Topic, key, t.Payload, headers); err != nil {
+				m.TaskPublishFailed()
 				next := now.Add(backoff(t.PublishAttempts + 1))
 				err := store.MarkPublishFailed(ctx, t.ID, err.Error(), next)
 				if err != nil {
@@ -67,6 +72,8 @@ func MakeProcessDueTasksUseCase(
 				log.Printf("reverting task %v: %v", t.ID, err)
 				continue
 			}
+			m.PublishLatency(time.Since(start))
+			m.TaskPublished()
 			err := store.MarkPublished(ctx, t.ID)
 			if err != nil {
 				return err
