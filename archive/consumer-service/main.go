@@ -7,8 +7,8 @@ import (
 	"time"
 
 	"github.com/ecociel/when/archive/repos/sql"
-	"github.com/ecociel/when/domain"
-	"github.com/ecociel/when/uc"
+	"github.com/ecociel/when/archive/uc"
+	"github.com/ecociel/when/lib/domain"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/twmb/franz-go/pkg/kgo"
 )

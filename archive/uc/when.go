@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/ecociel/when/domain"
+	"github.com/ecociel/when/lib/domain"
 	"github.com/emicklei/go-restful/v3/log"
 )
 
@@ -16,29 +16,19 @@ const (
 	CompletionMarkPublished
 )
 
-// EventPublisher TODO
-type EventPublisher interface {
+type publisher interface {
 	PublishSync(ctx context.Context, task domain.Task) error
 }
 
-type DueTaskStore interface {
-	ClaimDueTasks(ctx context.Context, now time.Time, limit int) ([]domain.Task, error)
-	//DeleteTaskByID(ctx context.Context, id int64) error
-	//RevertTaskToPending(ctx context.Context, id int64, nextRunAt time.Time) error
-
+type store interface {
+	ClaimDueTasks(ctx context.Context, limit int) ([]domain.Task, error)
 	MarkPublished(ctx context.Context, id int64) error
-	//
-	//MarkPublishFailed(ctx context.Context, id int64, errMsg string, nextRunAt time.Time) error
-	//ResetStuckPublishing(ctx context.Context, olderThan time.Duration) (int64, error)
+	Delete(ctx context.Context, id int64) error
 }
 
-type ProcessDueTasksUseCase = func(ctx context.Context, limit int) error
-
-//type ReclaimStuckUseCase = func(ctx context.Context, olderThan time.Duration) (int64, error)
-
 func MakeProcessDueTasksUseCase(
-	store DueTaskStore,
-	publisher EventPublisher,
+	store store,
+	publisher publisher,
 	mode PublishCompletionMode,
 //m metrics.SchedulerMetrics,
 ) ProcessDueTasksUseCase {
@@ -84,7 +74,7 @@ func MakeProcessDueTasksUseCase(
 	}
 }
 
-//func MakeReclaimStuckUseCase(store DueTaskStore) ReclaimStuckUseCase {
+//func MakeReclaimStuckUseCase(store store) ReclaimStuckUseCase {
 //	return func(ctx context.Context, olderThan time.Duration) (int64, error) {
 //		return store.ResetStuckPublishing(ctx, olderThan)
 //	}

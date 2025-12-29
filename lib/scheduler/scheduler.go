@@ -4,10 +4,12 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/ecociel/when/domain"
+	"github.com/ecociel/when/lib/domain"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
+// Scheduler adds tasks to the task table to be published on the task queue
+// once due.
 type Scheduler struct {
 	pool *pgxpool.Pool
 }
@@ -16,6 +18,7 @@ func New(pool *pgxpool.Pool) *Scheduler {
 	return &Scheduler{pool: pool}
 }
 
+// Schedule a task at a given time.
 func (s *Scheduler) Schedule(ctx context.Context, task domain.Task) (id int64, err error) {
 	const q = `
         INSERT INTO task

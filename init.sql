@@ -17,4 +17,5 @@ CREATE TABLE IF NOT EXISTS task (
     updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
--- TODO indexes
+CREATE INDEX IF NOT EXISTS idx_task_state_paused_due
+    ON scheduled_tasks (state, paused, due);

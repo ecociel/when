@@ -5,10 +5,9 @@ import (
 	"log"
 	"time"
 
-	"github.com/ecociel/when/cmd/observer/gateway/kafka"
-	"github.com/ecociel/when/cmd/observer/repos/sql"
+	"github.com/ecociel/when/cmd/observer/kafka"
+	"github.com/ecociel/when/cmd/observer/postgres"
 	"github.com/ecociel/when/cmd/observer/runner"
-	"github.com/ecociel/when/uc"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/kelseyhightower/envconfig"
 	"github.com/twmb/franz-go/pkg/kgo"
@@ -32,7 +31,7 @@ func main() {
 		log.Fatal(err)
 	}
 	defer pool.Close()
-	store := sql.NewPostgresRepo(pool)
+	store := postgres.New(pool)
 
 	kClient, err := mustNewKafkaClient(config.QueueHostPorts, config.EventsConsumerGroup, config.EventsTopic)
 	if err != nil {
@@ -40,11 +39,9 @@ func main() {
 	}
 	defer kClient.Close()
 
-	publisher := kafka.NewPublisher(kClient)
+	publisher := kafka.New(kClient)
 
-	process := uc.MakeProcessDueTasksUseCase(store, publisher, uc.CompletionMarkPublished)
-
-	go runner.NewRunner(process, 100, 10*time.Second).Run(ctx)
+	go runner.New(100, 10*time.Second, store, publisher, runner.CompletionMarkPublished).Run(ctx)
 
 	select {}
 }

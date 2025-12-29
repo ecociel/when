@@ -7,8 +7,9 @@ import (
 	"log"
 	"time"
 
-	"github.com/ecociel/when/domain"
-	"github.com/ecociel/when/scheduler"
+	"github.com/ecociel/when/lib/domain"
+	"github.com/ecociel/when/lib/scheduler"
+	"github.com/ecociel/when/lib/worker"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/kelseyhightower/envconfig"
 	"github.com/twmb/franz-go/pkg/kgo"
@@ -63,89 +64,15 @@ func main() {
 		}
 	}()
 
-	println("1")
 	kClient, err := mustNewKafkaClient(config.QueueHostPorts, config.EventsConsumerGroup, config.EventsTopic)
 	if err != nil {
 		log.Fatal(err)
 	}
 	defer kClient.Close()
-	println("2")
-	ctx := context.Background()
-	for {
-		println("3")
-		fetches := kClient.PollFetches(ctx)
-		if fetches.IsClientClosed() {
-			log.Println("consuming client closed, returning")
-			return
-		}
-		println("3.5")
-		fetches.EachError(func(t string, p int32, err error) {
-			log.Printf("fetch err topic %s partition %d: %v", t, p, err)
-		})
-		if errs := fetches.Errors(); len(errs) > 0 {
-			log.Println("poll error:", errs)
-			continue
-		}
-		println("4")
 
-		fetches.EachRecord(func(record *kgo.Record) {
-
-			name := name(record.Headers)
-			id := id(record.Headers)
-			switch name {
-			case "PrintCount":
-				if err = printCountHdl(id, record.Value); err != nil {
-					log.Printf("hanlde PrintCount/%s: %v", id, err)
-				}
-			default:
-				log.Printf("Unkown task: %q", name)
-			}
-
-			//// decide if action should be scheduled
-			//if evt.Type == "USER_UPDATED" {
-			//	// schedule a future task
-			//	payload := []byte(`{"action":"sync_user","userId":` +
-			//		json.Number(rune(evt.UserID)).String() + `}`)
-			//
-			//	task := &domain.Task{
-			//		Name:   "tasks.queue",
-			//		Args: payload,
-			//		Due:   time.Now().Add(10 * time.Minute),
-			//	}
-			//
-			//	id, err := scheduleTask(ctx, task)
-			//	if err != nil {
-			//		log.Println("failed to schedule:", err)
-			//	} else {
-			//		log.Println("scheduled future task:", id)
-			//	}
-			//}
-		})
-		if fetches.NumRecords() == 0 {
-			log.Printf("no records, sleep 1s")
-			time.Sleep(1000 * time.Millisecond)
-		}
-	}
-
-	//select {}
-
-}
-
-func name(headers []kgo.RecordHeader) string {
-	for i := range headers {
-		if headers[i].Key == domain.HeaderTaskName {
-			return string(headers[i].Value)
-		}
-	}
-	return ""
-}
-func id(headers []kgo.RecordHeader) string {
-	for i := range headers {
-		if headers[i].Key == domain.HeaderTaskID {
-			return string(headers[i].Value)
-		}
-	}
-	return ""
+	wrk := worker.New(kClient)
+	wrk.RegisterHandler("PrintCount", printCountHdl)
+	wrk.Run(context.Background())
 }
 
 func mustNewKafkaClient(hostPorts []string, group, topic string) (*kgo.Client, error) {

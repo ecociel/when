@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"strconv"
 
-	"github.com/ecociel/when/domain"
+	"github.com/ecociel/when/lib/domain"
 	"github.com/twmb/franz-go/pkg/kgo"
 )
 
@@ -13,7 +13,7 @@ type Publisher struct {
 	client *kgo.Client
 }
 
-func NewPublisher(client *kgo.Client) *Publisher {
+func New(client *kgo.Client) *Publisher {
 	return &Publisher{client: client}
 }
 

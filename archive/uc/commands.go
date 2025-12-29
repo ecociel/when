@@ -2,7 +2,8 @@ package uc
 
 import (
 	"context"
-	"github.com/ecociel/when/domain"
+
+	"github.com/ecociel/when/lib/domain"
 )
 
 //TODO Need rework

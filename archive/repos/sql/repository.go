@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/ecociel/when/domain"
+	"github.com/ecociel/when/lib/domain"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
