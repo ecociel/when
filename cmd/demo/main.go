@@ -2,57 +2,179 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
-	"github.com/ecociel/when/domain"
-	"github.com/ecociel/when/gateway/kafka"
-	"github.com/ecociel/when/repos/sql"
-	"github.com/ecociel/when/runner"
-	"github.com/ecociel/when/uc"
-	"github.com/jackc/pgx/v5/pgxpool"
-	"github.com/twmb/franz-go/pkg/kgo"
 	"log"
 	"time"
+
+	"github.com/ecociel/when/domain"
+	"github.com/ecociel/when/scheduler"
+	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/kelseyhightower/envconfig"
+	"github.com/twmb/franz-go/pkg/kgo"
 )
 
-func main() {
-	ctx := context.Background()
+type Payload struct {
+	Action string `json:"action"`
+	Seq    int    `json:"seq"`
+}
 
-	pool, err := pgxpool.New(ctx, "postgres://scheduler:scheduler@localhost:5432/postgres?sslmode=disable")
+type Config struct {
+	DbConnectionUri     string   `required:"true" split_words:"true"`
+	QueueHostPorts      []string `required:"true" split_words:"true"`
+	EventsTopic         string   `required:"true" split_words:"true"`
+	EventsConsumerGroup string   `required:"true" split_words:"true"`
+}
+
+type Counter struct {
+	Count string `json:"count"`
+}
+
+func main() {
+	var config Config
+	envconfig.MustProcess("", &config)
+
+	pool, err := pgxpool.New(context.Background(), config.DbConnectionUri)
 	if err != nil {
 		log.Fatal(err)
 	}
-	if err := pool.Ping(ctx); err != nil {
-		log.Fatalf("Unable to connect to Postgres: %v", err)
-	}
+	defer pool.Close()
 
-	fmt.Println("Connected to Postgres successfully!")
+	sched := scheduler.New(pool)
 
-	kClient, err := kgo.NewClient(kgo.SeedBrokers("localhost:9092"))
+	printCountHdl := MakePrintCountHandler()
+
+	go func() {
+
+		for seq := 0; true; seq++ {
+			select {
+			case <-time.After(2 * time.Second):
+				task := domain.Task{
+					Name:         "PrintCount",
+					PartitionKey: domain.PartitionKeyNone,
+					Args:         []byte(fmt.Sprintf(`{"count":"%d"}`, seq)),
+					Due:          time.Now().Add(5 * time.Second),
+				}
+				if _, err := sched.Schedule(context.Background(), task); err != nil {
+					log.Fatal(err)
+				}
+				log.Println("scheduled")
+			}
+		}
+	}()
+
+	println("1")
+	kClient, err := mustNewKafkaClient(config.QueueHostPorts, config.EventsConsumerGroup, config.EventsTopic)
 	if err != nil {
 		log.Fatal(err)
 	}
 	defer kClient.Close()
+	println("2")
+	ctx := context.Background()
+	for {
+		println("3")
+		fetches := kClient.PollFetches(ctx)
+		if fetches.IsClientClosed() {
+			log.Println("consuming client closed, returning")
+			return
+		}
+		println("3.5")
+		fetches.EachError(func(t string, p int32, err error) {
+			log.Printf("fetch err topic %s partition %d: %v", t, p, err)
+		})
+		if errs := fetches.Errors(); len(errs) > 0 {
+			log.Println("poll error:", errs)
+			continue
+		}
+		println("4")
 
-	store := sql.NewPostgresRepo(pool)
+		fetches.EachRecord(func(record *kgo.Record) {
 
-	publisher := kafka.NewPublisher(kClient, "")
+			name := name(record.Headers)
+			id := id(record.Headers)
+			switch name {
+			case "PrintCount":
+				if err = printCountHdl(id, record.Value); err != nil {
+					log.Printf("hanlde PrintCount/%s: %v", id, err)
+				}
+			default:
+				log.Printf("Unkown task: %q", name)
+			}
 
-	scheduleTask := uc.MakeScheduleUseCase(store)
-
-	process := uc.MakeProcessDueTasksUseCase(store, publisher, uc.CompletionMarkPublished)
-
-	go runner.NewRunner(process, 100, 10*time.Second).Run(ctx)
-
-	task := &domain.Task{
-		Topic:   "email.send",
-		Payload: []byte(`{"email":"user@example.com","subject":"Hello"}`),
-		RunAt:   time.Now().Add(5 * time.Second),
+			//// decide if action should be scheduled
+			//if evt.Type == "USER_UPDATED" {
+			//	// schedule a future task
+			//	payload := []byte(`{"action":"sync_user","userId":` +
+			//		json.Number(rune(evt.UserID)).String() + `}`)
+			//
+			//	task := &domain.Task{
+			//		Name:   "tasks.queue",
+			//		Args: payload,
+			//		Due:   time.Now().Add(10 * time.Minute),
+			//	}
+			//
+			//	id, err := scheduleTask(ctx, task)
+			//	if err != nil {
+			//		log.Println("failed to schedule:", err)
+			//	} else {
+			//		log.Println("scheduled future task:", id)
+			//	}
+			//}
+		})
+		if fetches.NumRecords() == 0 {
+			log.Printf("no records, sleep 1s")
+			time.Sleep(1000 * time.Millisecond)
+		}
 	}
 
-	taskId, err := scheduleTask(ctx, task)
+	//select {}
+
+}
+
+func name(headers []kgo.RecordHeader) string {
+	for i := range headers {
+		if headers[i].Key == domain.HeaderTaskName {
+			return string(headers[i].Value)
+		}
+	}
+	return ""
+}
+func id(headers []kgo.RecordHeader) string {
+	for i := range headers {
+		if headers[i].Key == domain.HeaderTaskID {
+			return string(headers[i].Value)
+		}
+	}
+	return ""
+}
+
+func mustNewKafkaClient(hostPorts []string, group, topic string) (*kgo.Client, error) {
+	client, err := kgo.NewClient(
+		kgo.SeedBrokers(hostPorts...),
+		kgo.ConsumerGroup(group),
+		kgo.ConsumeTopics(topic),
+		kgo.AllowAutoTopicCreation(),
+		kgo.RecordRetries(1),
+		kgo.RecordDeliveryTimeout(1*time.Second),
+		kgo.DefaultProduceTopic(topic),
+		kgo.DisableAutoCommit(),
+		kgo.FetchMaxWait(1*time.Second),
+		kgo.ConsumeResetOffset(kgo.NewOffset().AtStart()),
+	)
 	if err != nil {
-		log.Fatal(err)
+		log.Fatalf("create events client: %v", err)
 	}
-	log.Printf("task ID: %d", taskId)
-	select {}
+	return client, nil
+}
+
+func MakePrintCountHandler() func(id string, data []byte) error {
+	return func(id string, data []byte) error {
+		var c Counter
+		if err := json.Unmarshal(data, &c); err != nil {
+			log.Printf("unmarshal counter of task PrintCount/%s: %v", id, err)
+		}
+		log.Printf("PrintCount %s: %s", id, c.Count)
+		return nil
+	}
+
 }

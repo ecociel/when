@@ -2,21 +2,22 @@ package main
 
 import (
 	"context"
-	"github.com/ecociel/when/metrics"
-	"github.com/prometheus/client_golang/prometheus"
-	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"log"
 	"net/http"
 	"os"
 	"os/signal"
 	"time"
 
+	"github.com/ecociel/when/archive/metrics"
+	"github.com/ecociel/when/archive/repos/sql"
+	"github.com/ecociel/when/cmd/observer/gateway/kafka"
+	"github.com/ecociel/when/cmd/observer/runner"
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
+
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/twmb/franz-go/pkg/kgo"
 
-	"github.com/ecociel/when/gateway/kafka"
-	"github.com/ecociel/when/repos/sql"
-	"github.com/ecociel/when/runner"
 	"github.com/ecociel/when/uc"
 )
 

@@ -1,47 +1,100 @@
+volumes:
+  redpanda-0: null
 services:
-  postgres:
-    image: postgres:16-alpine
-    container_name: scheduler-postgres
-    restart: unless-stopped
+  redpanda-0:
+    command:
+      - redpanda
+      - start
+      - --kafka-addr internal://0.0.0.0:9092,external://0.0.0.0:19092
+      # Address the broker advertises to clients that connect to the Kafka API.
+      # Use the internal addresses to connect to the Redpanda brokers'
+      # from inside the same Docker network.
+      # Use the external addresses to connect to the Redpanda brokers'
+      # from outside the Docker network.
+      - --advertise-kafka-addr internal://redpanda-0:9092,external://localhost:19092
+      - --pandaproxy-addr internal://0.0.0.0:8082,external://0.0.0.0:18082
+      # Address the broker advertises to clients that connect to the HTTP Proxy.
+      - --advertise-pandaproxy-addr internal://redpanda-0:8082,external://localhost:18082
+      - --schema-registry-addr internal://0.0.0.0:8081,external://0.0.0.0:18081
+      # Redpanda brokers use the RPC API to communicate with each other internally.
+      - --rpc-addr redpanda-0:33145
+      - --advertise-rpc-addr redpanda-0:33145
+      # Mode dev-container uses well-known configuration properties for development in containers.
+      - --mode dev-container
+      # Tells Seastar (the framework Redpanda uses under the hood) to use 1 core on the system.
+      - --smp 1
+      - --default-log-level=info
+    image: docker.redpanda.com/redpandadata/redpanda:v25.3.1
+    container_name: redpanda-0
+    volumes:
+      - ./tmp/redpanda_data:/var/lib/redpanda/data
+    #networks:
+    #  #- redpanda_network
+    #  - inner
+    #ports:
+    #  - 18081:18081
+    #  - 18082:18082
+    #  - 19092:19092
+    #  - 19644:9644
+  console:
+    container_name: redpanda-console
+    image: docker.redpanda.com/redpandadata/console:v3.3.2
+    #networks:
+    #  #- redpanda_network
+    #  - inner
+    entrypoint: /bin/sh
+    command: -c 'echo "$$CONSOLE_CONFIG_FILE" > /tmp/config.yml; /app/console'
     environment:
-      POSTGRES_USER: scheduler
-      POSTGRES_PASSWORD: scheduler
-      POSTGRES_DB: scheduler
+      CONFIG_FILEPATH: /tmp/config.yml
+      CONSOLE_CONFIG_FILE: |
+        kafka:
+          brokers: ["redpanda-0:9092"]
+        schemaRegistry:
+          enabled: true
+          urls: ["http://redpanda-0:8081"]
+        redpanda:
+          adminApi:
+            enabled: true
+            urls: ["http://redpanda-0:9644"]
+    ports:
+      - 8000:8080
+    depends_on:
+      - redpanda-0
+
+  postgres:
+    image: postgres
+    container_name: postgres
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
     ports:
       - "5432:5432"
     volumes:
-      - scheduler_postgres_data:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U scheduler"]
-      interval: 5s
-      timeout: 3s
-      retries: 5
+      - ./tmp/postgres_data:/var/lib/postgresql
+      #- ./10_init.sh:/docker-entrypoint-initdb.d/10_init.sh
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
 
-  kafka:
-    image: apache/kafka:4.1.1
-    container_name: scheduler-kafka
-    ports:
-      - "9092:9092"
+  demo:
+    image: when-demo
+    container_name: demo
+    restart: always
     environment:
-      # KRaft single-node
-      KAFKA_NODE_ID: "1"
-      KAFKA_PROCESS_ROLES: "broker,controller"
-      KAFKA_CONTROLLER_QUORUM_VOTERS: "1@localhost:9093"
-
-      # Listeners
-      KAFKA_LISTENERS: "PLAINTEXT://0.0.0.0:9092,CONTROLLER://0.0.0.0:9093"
-      KAFKA_ADVERTISED_LISTENERS: "PLAINTEXT://localhost:9092"
-      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: "PLAINTEXT:PLAINTEXT,CONTROLLER:PLAINTEXT"
-      KAFKA_CONTROLLER_LISTENER_NAMES: "CONTROLLER"
-
-      # Single-broker dev settings
-      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: "1"
-      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: "1"
-      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: "1"
-      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: "0"
-    volumes:
-      - kafka_data:/var/lib/kafka/data
-volumes:
-  scheduler_postgres_data:
-  kafka_data:
-    driver: local
+      - DB_CONNECTION_URI=postgres://postgres:postgres@postgres:5432/postgres
+      - QUEUE_HOST_PORTS=redpanda-0:9092
+      - EVENTS_TOPIC=events
+      - EVENTS_CONSUMER_GROUP=demo
+    depends_on:
+      postgres:
+        condition: service_started
+  observer:
+    image: when-observer
+    container_name: observer
+    restart: always
+    environment:
+      - DB_CONNECTION_URI=postgres://postgres:postgres@postgres:5432/postgres
+      - QUEUE_HOST_PORTS=redpanda-0:9092
+      - EVENTS_TOPIC=events
+      - EVENTS_CONSUMER_GROUP=demo
+    depends_on:
+      postgres:
+        condition: service_started

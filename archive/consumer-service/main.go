@@ -3,13 +3,14 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"log"
+	"time"
+
+	"github.com/ecociel/when/archive/repos/sql"
 	"github.com/ecociel/when/domain"
-	"github.com/ecociel/when/repos/sql"
 	"github.com/ecociel/when/uc"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/twmb/franz-go/pkg/kgo"
-	"log"
-	"time"
 )
 
 type ExploreEvent struct {
@@ -56,9 +57,9 @@ func main() {
 					json.Number(rune(evt.UserID)).String() + `}`)
 
 				task := &domain.Task{
-					Topic:   "tasks.queue",
-					Payload: payload,
-					RunAt:   time.Now().Add(10 * time.Minute),
+					Name: "tasks.queue",
+					Args: payload,
+					Due:  time.Now().Add(10 * time.Minute),
 				}
 
 				id, err := scheduleTask(ctx, task)
