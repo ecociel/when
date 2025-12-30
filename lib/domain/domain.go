@@ -6,14 +6,17 @@ import "time"
 // because sort order of tasks is not important.
 const PartitionKeyNone = "-"
 
-const HeaderTaskID = "task_id"
-const HeaderTaskName = "task_name"
+const HeaderID = "id"
+const HeaderName = "name"
+const HeaderRetryCount = "retry_count"
+const HeaderRetryReason = "retry_reason"
 
 type Task struct {
-	ID           int64
+	ID           uint64
 	Name         string
 	PartitionKey string
 	Args         []byte
 	Due          time.Time
-	Paused       bool
+	RetryCount   uint16
+	RetryReason  string
 }

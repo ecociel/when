@@ -22,7 +22,7 @@ type publisher interface {
 
 type store interface {
 	ClaimDueTasks(ctx context.Context, limit int) ([]domain.Task, error)
-	Delete(ctx context.Context, id int64) error
+	Delete(ctx context.Context, id uint64) error
 }
 
 func New(limit int, interval time.Duration, store store, publisher publisher) *Runner {
@@ -66,25 +66,10 @@ func (r *Runner) process(ctx context.Context) error {
 		}
 		//m.PublishLatency(time.Since(start))
 		//m.TaskPublished()
-		err := r.store.Delete(ctx, task.ID)
-		if err != nil {
+		if err := r.store.Delete(ctx, task.ID); err != nil {
 			return fmt.Errorf("deletion failed for %d: %w", task.ID, err)
 		}
 
 	}
 	return nil
 }
-
-// implement reschedule delay on publish error with backoff
-//func backoff(attempt int) time.Duration {
-//	switch attempt {
-//	case 1:
-//		return 5 * time.Second
-//	case 2:
-//		return 15 * time.Second
-//	case 3:
-//		return 1 * time.Minute
-//	default:
-//		return 5 * time.Minute
-//	}
-//}

@@ -18,7 +18,7 @@ func New(pool *pgxpool.Pool) *Repo {
 
 func (repo *Repo) ClaimDueTasks(ctx context.Context, limit int) ([]domain.Task, error) {
 	const q = `
-    SELECT id, name, partition_key, args
+    SELECT id, name, partition_key, args,due,retry_count, COALESCE(retry_reason,'')
     FROM task
     WHERE due < now() AND paused = FALSE ORDER BY due
     LIMIT $1
@@ -32,7 +32,7 @@ func (repo *Repo) ClaimDueTasks(ctx context.Context, limit int) ([]domain.Task, 
 	var tasks []domain.Task
 	for rows.Next() {
 		var task domain.Task
-		if err := rows.Scan(&task.ID, &task.Name, &task.PartitionKey, &task.Args); err != nil {
+		if err := rows.Scan(&task.ID, &task.Name, &task.PartitionKey, &task.Args, &task.Due, &task.RetryCount, &task.RetryReason); err != nil {
 			return nil, err
 		}
 		tasks = append(tasks, task)
@@ -43,7 +43,7 @@ func (repo *Repo) ClaimDueTasks(ctx context.Context, limit int) ([]domain.Task, 
 	return tasks, nil
 }
 
-func (repo *Repo) Delete(ctx context.Context, id int64) error {
+func (repo *Repo) Delete(ctx context.Context, id uint64) error {
 	const q = `
       DELETE FROM task WHERE id = $1`
 	if _, err := repo.pool.Exec(ctx, q, id); err != nil {

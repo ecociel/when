@@ -80,7 +80,7 @@ func main() {
 	}
 	defer kClient.Close()
 
-	wrk := worker.New(kClient)
+	wrk := worker.New(kClient, pool)
 	wrk.RegisterHandler("PrintCount", printCountHdl)
 	wrk.Run(context.Background())
 }
@@ -94,7 +94,7 @@ func mustNewKafkaClient(hostPorts []string, group, topic string) (*kgo.Client, e
 		//kgo.RecordRetries(1),
 		//kgo.RecordDeliveryTimeout(1*time.Second),
 		//kgo.DefaultProduceTopic(topic),
-		//kgo.DisableAutoCommit(),
+		kgo.DisableAutoCommit(),
 		//kgo.FetchMaxWait(1*time.Second),
 		//kgo.ConsumeResetOffset(kgo.NewOffset().AtStart()),
 	)
@@ -104,13 +104,18 @@ func mustNewKafkaClient(hostPorts []string, group, topic string) (*kgo.Client, e
 	return client, nil
 }
 
-func MakePrintCountHandler() func(id string, data []byte) error {
-	return func(id string, data []byte) error {
+func MakePrintCountHandler() func(id uint64, data []byte) error {
+	return func(id uint64, data []byte) error {
 		var c Counter
 		if err := json.Unmarshal(data, &c); err != nil {
-			log.Printf("unmarshal counter of task PrintCount/%s: %v", id, err)
+			return fmt.Errorf("unmarshal counter of task PrintCount/%d: %v", id, err)
 		}
-		log.Printf("Handled PrintCount %s: %s", id, c.Count)
+		x, _ := strconv.Atoi(c.Count)
+
+		if x%100 == 0 {
+			return fmt.Errorf("MODULO FAILED: %d", id)
+		}
+		log.Printf("Handled PrintCount %d: %s", id, c.Count)
 		n, _ := strconv.ParseInt(c.Count, 10, 64)
 
 		check[n] = time.Now().Unix() - c.Ts
