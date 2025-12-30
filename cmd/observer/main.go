@@ -14,10 +14,9 @@ import (
 )
 
 type Config struct {
-	DbConnectionUri     string   `required:"true" split_words:"true"`
-	QueueHostPorts      []string `required:"true" split_words:"true"`
-	EventsTopic         string   `required:"true" split_words:"true"`
-	EventsConsumerGroup string   `required:"true" split_words:"true"`
+	DbConnectionUri string   `required:"true" split_words:"true"`
+	QueueHostPorts  []string `required:"true" split_words:"true"`
+	EventsTopic     string   `required:"true" split_words:"true"`
 }
 
 func main() {
@@ -33,7 +32,7 @@ func main() {
 	defer pool.Close()
 	store := postgres.New(pool)
 
-	kClient, err := mustNewKafkaClient(config.QueueHostPorts, config.EventsConsumerGroup, config.EventsTopic)
+	kClient, err := mustNewKafkaClient(config.QueueHostPorts, config.EventsTopic)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -41,21 +40,19 @@ func main() {
 
 	publisher := kafka.New(kClient)
 
-	go runner.New(100, 10*time.Second, store, publisher, runner.CompletionMarkPublished).Run(ctx)
+	go runner.New(100, 10*time.Second, store, publisher).Run(ctx)
 
 	select {}
 }
 
-func mustNewKafkaClient(hostPorts []string, group, topic string) (*kgo.Client, error) {
+func mustNewKafkaClient(hostPorts []string, topic string) (*kgo.Client, error) {
 	client, err := kgo.NewClient(
 		kgo.SeedBrokers(hostPorts...),
-		kgo.ConsumerGroup(group),
-		kgo.ConsumeTopics(topic),
 		kgo.AllowAutoTopicCreation(),
-		kgo.RecordRetries(1),
-		kgo.RecordDeliveryTimeout(1*time.Second),
+		//kgo.RecordRetries(1),
+		//kgo.RecordDeliveryTimeout(1*time.Second),
 		kgo.DefaultProduceTopic(topic),
-		kgo.DisableAutoCommit(),
+		//kgo.DisableAutoCommit(),
 	)
 	if err != nil {
 		log.Fatalf("create events client: %v", err)

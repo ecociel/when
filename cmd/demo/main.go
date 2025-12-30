@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"strconv"
 	"time"
 
 	"github.com/ecociel/when/lib/domain"
@@ -29,7 +30,10 @@ type Config struct {
 
 type Counter struct {
 	Count string `json:"count"`
+	Ts    int64  `json:"ts"`
 }
+
+var check = make([]int64, 1000)
 
 func main() {
 	var config Config
@@ -47,20 +51,26 @@ func main() {
 
 	go func() {
 
-		for seq := 0; true; seq++ {
+		for seq := 0; seq < 1000; seq++ {
 			select {
-			case <-time.After(2 * time.Second):
+			case <-time.After(200 * time.Millisecond):
 				task := domain.Task{
 					Name:         "PrintCount",
 					PartitionKey: domain.PartitionKeyNone,
-					Args:         []byte(fmt.Sprintf(`{"count":"%d"}`, seq)),
+					Args:         []byte(fmt.Sprintf(`{"count":"%d","ts":%d}`, seq, time.Now().Unix())),
 					Due:          time.Now().Add(5 * time.Second),
 				}
 				if _, err := sched.Schedule(context.Background(), task); err != nil {
 					log.Fatal(err)
 				}
-				log.Println("scheduled")
+				check[seq] = 0
 			}
+		}
+
+		time.Sleep(10)
+
+		for i := 0; i < 1000; i++ {
+			log.Printf("%d %d", i, check[i])
 		}
 	}()
 
@@ -81,12 +91,12 @@ func mustNewKafkaClient(hostPorts []string, group, topic string) (*kgo.Client, e
 		kgo.ConsumerGroup(group),
 		kgo.ConsumeTopics(topic),
 		kgo.AllowAutoTopicCreation(),
-		kgo.RecordRetries(1),
-		kgo.RecordDeliveryTimeout(1*time.Second),
-		kgo.DefaultProduceTopic(topic),
-		kgo.DisableAutoCommit(),
-		kgo.FetchMaxWait(1*time.Second),
-		kgo.ConsumeResetOffset(kgo.NewOffset().AtStart()),
+		//kgo.RecordRetries(1),
+		//kgo.RecordDeliveryTimeout(1*time.Second),
+		//kgo.DefaultProduceTopic(topic),
+		//kgo.DisableAutoCommit(),
+		//kgo.FetchMaxWait(1*time.Second),
+		//kgo.ConsumeResetOffset(kgo.NewOffset().AtStart()),
 	)
 	if err != nil {
 		log.Fatalf("create events client: %v", err)
@@ -100,7 +110,10 @@ func MakePrintCountHandler() func(id string, data []byte) error {
 		if err := json.Unmarshal(data, &c); err != nil {
 			log.Printf("unmarshal counter of task PrintCount/%s: %v", id, err)
 		}
-		log.Printf("PrintCount %s: %s", id, c.Count)
+		log.Printf("Handled PrintCount %s: %s", id, c.Count)
+		n, _ := strconv.ParseInt(c.Count, 10, 64)
+
+		check[n] = time.Now().Unix() - c.Ts
 		return nil
 	}
 

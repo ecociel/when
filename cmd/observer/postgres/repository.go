@@ -20,7 +20,7 @@ func (repo *Repo) ClaimDueTasks(ctx context.Context, limit int) ([]domain.Task, 
 	const q = `
     SELECT id, name, partition_key, args
     FROM task
-    WHERE state = 'pending' AND due < now() AND paused = FALSE ORDER BY due
+    WHERE due < now() AND paused = FALSE ORDER BY due
     LIMIT $1
      `
 	rows, err := repo.pool.Query(ctx, q, limit)
@@ -41,17 +41,6 @@ func (repo *Repo) ClaimDueTasks(ctx context.Context, limit int) ([]domain.Task, 
 		return nil, fmt.Errorf("rows claim due tasks: %w", err)
 	}
 	return tasks, nil
-}
-
-func (repo *Repo) MarkPublished(ctx context.Context, id int64) error {
-	const q = `
-      UPDATE task
-      SET state = 'published', updated_at = now()
-      WHERE id = $1`
-	if _, err := repo.pool.Exec(ctx, q, id); err != nil {
-		return fmt.Errorf("mark published for %d: %w", id, err)
-	}
-	return nil
 }
 
 func (repo *Repo) Delete(ctx context.Context, id int64) error {

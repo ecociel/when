@@ -3,6 +3,7 @@ package scheduler
 import (
 	"context"
 	"fmt"
+	"log"
 
 	"github.com/ecociel/when/lib/domain"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -18,7 +19,6 @@ func New(pool *pgxpool.Pool) *Scheduler {
 	return &Scheduler{pool: pool}
 }
 
-// Schedule a task at a given time.
 func (s *Scheduler) Schedule(ctx context.Context, task domain.Task) (id int64, err error) {
 	const q = `
         INSERT INTO task
@@ -31,5 +31,6 @@ func (s *Scheduler) Schedule(ctx context.Context, task domain.Task) (id int64, e
 	if err != nil {
 		return id, fmt.Errorf("insert task: %w", err)
 	}
+	log.Printf("Scheduled PrintCount %s/%d: %s", task.Name, id, string(task.Args))
 	return id, nil
 }

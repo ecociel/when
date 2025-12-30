@@ -28,13 +28,11 @@ func (w *Worker) RegisterHandler(name string, hdl Handler) {
 
 func (w *Worker) Run(ctx context.Context) {
 	for {
-		println("3")
 		fetches := w.client.PollFetches(ctx)
 		if fetches.IsClientClosed() {
 			log.Println("consuming client closed, returning")
 			return
 		}
-		println("3.5")
 		fetches.EachError(func(t string, p int32, err error) {
 			log.Printf("fetch err topic %s partition %d: %v", t, p, err)
 		})
@@ -42,7 +40,6 @@ func (w *Worker) Run(ctx context.Context) {
 			log.Println("poll error:", errs)
 			continue
 		}
-		println("4")
 
 		fetches.EachRecord(func(record *kgo.Record) {
 
