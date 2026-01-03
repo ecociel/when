@@ -16,11 +16,6 @@ import (
 	"github.com/twmb/franz-go/pkg/kgo"
 )
 
-type Payload struct {
-	Action string `json:"action"`
-	Seq    int    `json:"seq"`
-}
-
 type Config struct {
 	DbConnectionUri     string   `required:"true" split_words:"true"`
 	QueueHostPorts      []string `required:"true" split_words:"true"`
@@ -91,9 +86,6 @@ func mustNewKafkaClient(hostPorts []string, group, topic string) (*kgo.Client, e
 		kgo.ConsumerGroup(group),
 		kgo.ConsumeTopics(topic),
 		kgo.AllowAutoTopicCreation(),
-		//kgo.RecordRetries(1),
-		//kgo.RecordDeliveryTimeout(1*time.Second),
-		//kgo.DefaultProduceTopic(topic),
 		kgo.DisableAutoCommit(),
 		//kgo.FetchMaxWait(1*time.Second),
 		//kgo.ConsumeResetOffset(kgo.NewOffset().AtStart()),
