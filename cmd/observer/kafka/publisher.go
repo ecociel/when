@@ -28,14 +28,16 @@ func (p *Publisher) PublishSync(ctx context.Context, task domain.Task) error {
 }
 
 func taskToRec(task domain.Task) (rec kgo.Record) {
-	id := make([]byte, 8)
-	binary.BigEndian.PutUint64(id, task.ID)
-	var headers []kgo.RecordHeader
+	id := binary.BigEndian.AppendUint64(nil, task.ID)
+	capacity := 2
+	if task.RetryCount > 0 {
+		capacity = 4
+	}
+	headers := make([]kgo.RecordHeader, 0, capacity)
 	headers = append(headers, kgo.RecordHeader{Key: domain.HeaderID, Value: id})
 	headers = append(headers, kgo.RecordHeader{Key: domain.HeaderName, Value: []byte(task.Name)})
 	if task.RetryCount > 0 {
-		cnt := make([]byte, 2)
-		binary.BigEndian.PutUint16(cnt, task.RetryCount)
+		cnt := binary.BigEndian.AppendUint16(nil, task.RetryCount)
 		headers = append(headers, kgo.RecordHeader{Key: domain.HeaderRetryCount, Value: cnt})
 		headers = append(headers, kgo.RecordHeader{Key: domain.HeaderRetryReason, Value: []byte(task.RetryReason)})
 	}

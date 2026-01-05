@@ -84,16 +84,16 @@ func setReschedule(task *domain.Task, now time.Time, err error) {
 func recToTask(rec *kgo.Record) (task domain.Task) {
 	task.PartitionKey = string(rec.Key)
 	task.Args = rec.Value
-	for i := range rec.Headers {
-		switch rec.Headers[i].Key {
+	for _, header := range rec.Headers {
+		switch header.Key {
 		case domain.HeaderID:
-			task.ID = binary.BigEndian.Uint64(rec.Headers[i].Value)
+			task.ID = binary.BigEndian.Uint64(header.Value)
 		case domain.HeaderName:
-			task.Name = string(rec.Headers[i].Value)
+			task.Name = string(header.Value)
 		case domain.HeaderRetryCount:
-			task.RetryCount = binary.BigEndian.Uint16(rec.Headers[i].Value)
+			task.RetryCount = binary.BigEndian.Uint16(header.Value)
 		case domain.HeaderRetryReason:
-			task.RetryReason = string(rec.Headers[i].Value)
+			task.RetryReason = string(header.Value)
 		}
 	}
 	return
