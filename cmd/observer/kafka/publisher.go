@@ -9,8 +9,13 @@ import (
 	"github.com/twmb/franz-go/pkg/kgo"
 )
 
+// Producer defines the interface for producing messages to Kafka
+type Producer interface {
+	ProduceSync(ctx context.Context, rs ...*kgo.Record) kgo.ProduceResults
+}
+
 type Publisher struct {
-	client *kgo.Client
+	client Producer
 }
 
 func New(client *kgo.Client) *Publisher {
@@ -18,12 +23,10 @@ func New(client *kgo.Client) *Publisher {
 }
 
 func (p *Publisher) PublishSync(ctx context.Context, task domain.Task) error {
-
 	record := taskToRec(task)
 	if err := p.client.ProduceSync(ctx, &record).FirstErr(); err != nil {
 		return fmt.Errorf("publish event: %w\n", err)
 	}
-
 	return nil
 }
 
