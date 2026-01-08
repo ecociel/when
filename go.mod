@@ -5,6 +5,7 @@ go 1.24.10
 require (
 	github.com/emicklei/go-restful/v3 v3.13.0
 	github.com/jackc/pgx/v5 v5.7.6
+	github.com/kelseyhightower/envconfig v1.4.0
 	github.com/prometheus/client_golang v1.23.2
 	github.com/twmb/franz-go v1.20.5
 )

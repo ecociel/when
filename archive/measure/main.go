@@ -2,21 +2,23 @@ package main
 
 import (
 	"context"
-	"github.com/ecociel/when/metrics"
-	"github.com/prometheus/client_golang/prometheus"
-	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"log"
 	"net/http"
 	"os"
 	"os/signal"
 	"time"
 
+	"github.com/ecociel/when/archive/metrics"
+	"github.com/ecociel/when/archive/repos/sql"
+	uc2 "github.com/ecociel/when/archive/uc"
+	"github.com/ecociel/when/cmd/observer/kafka"
+	"github.com/ecociel/when/cmd/observer/runner"
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
+
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/twmb/franz-go/pkg/kgo"
 
-	"github.com/ecociel/when/gateway/kafka"
-	"github.com/ecociel/when/repos/sql"
-	"github.com/ecociel/when/runner"
 	"github.com/ecociel/when/uc"
 )
 
@@ -37,7 +39,7 @@ func main() {
 	defer kClient.Close()
 
 	store := sql.NewPostgresRepo(pool)
-	pub := kafka.NewPublisher(kClient, "")
+	pub := kafka.New(kClient, "")
 
 	reg := prometheus.NewRegistry()
 	m := metrics.NewPromMetrics(reg)
@@ -51,7 +53,7 @@ func main() {
 		}
 	}()
 
-	process := uc.MakeProcessDueTasksUseCase(store, pub, uc.CompletionMarkPublished, m)
+	process := uc2.MakeProcessDueTasksUseCase(store, pub, uc2.CompletionMarkPublished, m)
 
 	// Optional: reclaim stuck publishing rows
 	reclaim := uc.MakeReclaimStuckUseCase(store)
@@ -77,5 +79,5 @@ func main() {
 	}()
 
 	log.Println("relay started")
-	runner.NewRunner(process, 200, 1*time.Second).Run(ctx)
+	runner.New(process, 200, 1*time.Second).Run(ctx)
 }
