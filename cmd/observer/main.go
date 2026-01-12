@@ -40,7 +40,7 @@ func main() {
 
 	publisher := kafka.New(kClient)
 
-	go runner.New(100, 10*time.Second, store, publisher).Run(ctx)
+	go runner.New(100, 1*time.Second, store, publisher).Run(ctx)
 
 	select {}
 }

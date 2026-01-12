@@ -5,6 +5,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"os"
+	"os/signal"
 	"strconv"
 	"time"
 
@@ -75,9 +77,12 @@ func main() {
 	}
 	defer kClient.Close()
 
+	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt)
+	defer cancel()
+
 	wrk := worker.New(kClient, pool)
 	wrk.RegisterHandler("PrintCount", printCountHdl)
-	wrk.Run(context.Background())
+	wrk.Run(ctx)
 }
 
 func mustNewKafkaClient(hostPorts []string, group, topic string) (*kgo.Client, error) {

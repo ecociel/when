@@ -33,9 +33,11 @@ func (w *Worker) RegisterHandler(name string, hdl Handler) {
 }
 
 func (w *Worker) Run(ctx context.Context) {
-
+	log.Println("worker started, polling for messages")
 	for {
+		log.Println("calling poll fetches")
 		fetches := w.client.PollFetches(ctx)
+		log.Printf("received %d records", fetches.NumRecords())
 		if fetches.IsClientClosed() {
 			log.Println("consuming client closed, returning")
 			return
