@@ -77,7 +77,6 @@ func (w *Worker) Run(ctx context.Context) {
 func setReschedule(task *domain.Task, now time.Time, err error) {
 	task.RetryCount++
 	task.RetryReason = err.Error()
-	//task.Due = task.Due.Add(calculateBackoff(task.RetryCount, 30*time.Second, 1*time.Minute))
 	task.Due = now.Add(calculateBackoff(task.RetryCount, 30*time.Second, 1*time.Minute))
 }
 
@@ -119,7 +118,6 @@ func calculateBackoff(retryCount uint16, baseDelay, maxDelay time.Duration) time
 	if retryCount < 0 {
 		retryCount = 0
 	}
-
 	// Compute exponential factor: 2^retryCount
 	expFactor := math.Pow(2, float64(retryCount))
 

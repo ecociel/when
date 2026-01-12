@@ -56,11 +56,7 @@ func (r *Runner) process(ctx context.Context) error {
 	log.Printf("claimed %d due tasks", len(tasks))
 
 	for _, task := range tasks {
-		//start := time.Now()
-
 		if err := r.publisher.PublishSync(ctx, task); err != nil {
-			// implement reschedule delay on publish error with backoff
-			//next := now.Add(backoff(t.PublishAttempts + 1))
 			log.Printf("publish failed for %d: %v", task.ID, err)
 			continue
 		}
