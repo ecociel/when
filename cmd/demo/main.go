@@ -87,7 +87,7 @@ func mustNewKafkaClient(hostPorts []string, group, topic string) (*kgo.Client, e
 		kgo.ConsumeTopics(topic),
 		kgo.AllowAutoTopicCreation(),
 		kgo.DisableAutoCommit(),
-		//kgo.FetchMaxWait(1*time.Second),
+		kgo.FetchMaxWait(500*time.Millisecond),
 		//kgo.ConsumeResetOffset(kgo.NewOffset().AtStart()),
 	)
 	if err != nil {
