@@ -11,8 +11,8 @@ import (
 	"github.com/ecociel/when/archive/metrics"
 	"github.com/ecociel/when/archive/repos/sql"
 	uc2 "github.com/ecociel/when/archive/uc"
-	"github.com/ecociel/when/cmd/observer/kafka"
-	"github.com/ecociel/when/cmd/observer/runner"
+	"github.com/ecociel/when/lib/observer/kafka"
+	"github.com/ecociel/when/lib/observer/runner"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 

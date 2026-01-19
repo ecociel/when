@@ -7,6 +7,10 @@ import (
 	"time"
 
 	"github.com/ecociel/when/lib/domain"
+	"github.com/ecociel/when/lib/observer/kafka"
+	"github.com/ecociel/when/lib/observer/postgres"
+	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/twmb/franz-go/pkg/kgo"
 )
 
 type Runner struct {
@@ -25,12 +29,12 @@ type store interface {
 	Delete(ctx context.Context, id uint64) error
 }
 
-func New(limit int, interval time.Duration, store store, publisher publisher) *Runner {
+func New(limit int, interval time.Duration, pool *pgxpool.Pool, client *kgo.Client, topic string) *Runner {
 	return &Runner{
 		limit:     limit,
 		interval:  interval,
-		store:     store,
-		publisher: publisher,
+		store:     postgres.New(pool),
+		publisher: kafka.New(client, topic),
 	}
 }
 

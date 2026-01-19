@@ -5,9 +5,7 @@ import (
 	"log"
 	"time"
 
-	"github.com/ecociel/when/cmd/observer/kafka"
-	"github.com/ecociel/when/cmd/observer/postgres"
-	"github.com/ecociel/when/cmd/observer/runner"
+	"github.com/ecociel/when/lib/observer/runner"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/kelseyhightower/envconfig"
 	"github.com/twmb/franz-go/pkg/kgo"
@@ -30,7 +28,6 @@ func main() {
 		log.Fatal(err)
 	}
 	defer pool.Close()
-	store := postgres.New(pool)
 
 	kClient, err := mustNewKafkaClient(config.QueueHostPorts, config.EventsTopic)
 	if err != nil {
@@ -38,9 +35,7 @@ func main() {
 	}
 	defer kClient.Close()
 
-	publisher := kafka.New(kClient)
-
-	go runner.New(100, 1*time.Second, store, publisher).Run(ctx)
+	go runner.New(100, 1*time.Second, pool, kClient, config.EventsTopic).Run(ctx)
 
 	select {}
 }
@@ -51,7 +46,7 @@ func mustNewKafkaClient(hostPorts []string, topic string) (*kgo.Client, error) {
 		kgo.AllowAutoTopicCreation(),
 		//kgo.RecordRetries(1),
 		//kgo.RecordDeliveryTimeout(1*time.Second),
-		kgo.DefaultProduceTopic(topic),
+		//kgo.DefaultProduceTopic(topic),
 		//kgo.DisableAutoCommit(),
 	)
 	if err != nil {
