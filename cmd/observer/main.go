@@ -5,16 +5,17 @@ import (
 	"log"
 	"time"
 
-	"github.com/ecociel/when/lib/observer/runner"
+	"github.com/ecociel/when/lib/kafkaclient"
+	"github.com/ecociel/when/lib/observer"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/kelseyhightower/envconfig"
-	"github.com/twmb/franz-go/pkg/kgo"
 )
 
 type Config struct {
-	DbConnectionUri string   `required:"true" split_words:"true"`
-	QueueHostPorts  []string `required:"true" split_words:"true"`
-	EventsTopic     string   `required:"true" split_words:"true"`
+	DbConnectionUri    string   `required:"true" split_words:"true"`
+	QueueHostPorts     []string `required:"true" split_words:"true"`
+	TasksTopic         string   `required:"true" split_words:"true"`
+	TasksConsumerGroup string   `required:"true" split_words:"true"`
 }
 
 func main() {
@@ -29,28 +30,13 @@ func main() {
 	}
 	defer pool.Close()
 
-	kClient, err := mustNewKafkaClient(config.QueueHostPorts, config.EventsTopic)
+	kClient, err := kafkaclient.MustNew(config.QueueHostPorts, config.TasksConsumerGroup, config.TasksTopic)
 	if err != nil {
 		log.Fatal(err)
 	}
 	defer kClient.Close()
 
-	go runner.New(100, 1*time.Second, pool, kClient, config.EventsTopic).Run(ctx)
+	go observer.New(100, 1*time.Second, pool, kClient).Run(ctx)
 
 	select {}
-}
-
-func mustNewKafkaClient(hostPorts []string, topic string) (*kgo.Client, error) {
-	client, err := kgo.NewClient(
-		kgo.SeedBrokers(hostPorts...),
-		kgo.AllowAutoTopicCreation(),
-		//kgo.RecordRetries(1),
-		//kgo.RecordDeliveryTimeout(1*time.Second),
-		//kgo.DefaultProduceTopic(topic),
-		//kgo.DisableAutoCommit(),
-	)
-	if err != nil {
-		log.Fatalf("create events client: %v", err)
-	}
-	return client, nil
 }

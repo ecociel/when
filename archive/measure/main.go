@@ -11,8 +11,8 @@ import (
 	"github.com/ecociel/when/archive/metrics"
 	"github.com/ecociel/when/archive/repos/sql"
 	uc2 "github.com/ecociel/when/archive/uc"
+	"github.com/ecociel/when/lib/observer"
 	"github.com/ecociel/when/lib/observer/kafka"
-	"github.com/ecociel/when/lib/observer/runner"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 
@@ -79,5 +79,5 @@ func main() {
 	}()
 
 	log.Println("relay started")
-	runner.New(process, 200, 1*time.Second).Run(ctx)
+	observer.New(process, 200, 1*time.Second).Run(ctx)
 }

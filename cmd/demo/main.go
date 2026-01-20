@@ -11,18 +11,18 @@ import (
 	"time"
 
 	"github.com/ecociel/when/lib/domain"
+	"github.com/ecociel/when/lib/kafkaclient"
 	"github.com/ecociel/when/lib/scheduler"
 	"github.com/ecociel/when/lib/worker"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/kelseyhightower/envconfig"
-	"github.com/twmb/franz-go/pkg/kgo"
 )
 
 type Config struct {
-	DbConnectionUri     string   `required:"true" split_words:"true"`
-	QueueHostPorts      []string `required:"true" split_words:"true"`
-	EventsTopic         string   `required:"true" split_words:"true"`
-	EventsConsumerGroup string   `required:"true" split_words:"true"`
+	DbConnectionUri    string   `required:"true" split_words:"true"`
+	QueueHostPorts     []string `required:"true" split_words:"true"`
+	TasksTopic         string   `required:"true" split_words:"true"`
+	TasksConsumerGroup string   `required:"true" split_words:"true"`
 }
 
 type Counter struct {
@@ -71,7 +71,7 @@ func main() {
 		}
 	}()
 
-	kClient, err := mustNewKafkaClient(config.QueueHostPorts, config.EventsConsumerGroup, config.EventsTopic)
+	kClient, err := kafkaclient.MustNew(config.QueueHostPorts, config.TasksConsumerGroup, config.TasksTopic)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -83,22 +83,6 @@ func main() {
 	wrk := worker.New(kClient, pool)
 	wrk.RegisterHandler("PrintCount", printCountHdl)
 	wrk.Run(ctx)
-}
-
-func mustNewKafkaClient(hostPorts []string, group, topic string) (*kgo.Client, error) {
-	client, err := kgo.NewClient(
-		kgo.SeedBrokers(hostPorts...),
-		kgo.ConsumerGroup(group),
-		kgo.ConsumeTopics(topic),
-		kgo.AllowAutoTopicCreation(),
-		kgo.DisableAutoCommit(),
-		kgo.FetchMaxWait(500*time.Millisecond),
-		//kgo.ConsumeResetOffset(kgo.NewOffset().AtStart()),
-	)
-	if err != nil {
-		log.Fatalf("create events client: %v", err)
-	}
-	return client, nil
 }
 
 func MakePrintCountHandler() func(id uint64, data []byte) error {

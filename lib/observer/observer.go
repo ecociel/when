@@ -1,4 +1,4 @@
-package runner
+package observer
 
 import (
 	"context"
@@ -29,12 +29,12 @@ type store interface {
 	Delete(ctx context.Context, id uint64) error
 }
 
-func New(limit int, interval time.Duration, pool *pgxpool.Pool, client *kgo.Client, topic string) *Runner {
+func New(limit int, interval time.Duration, pool *pgxpool.Pool, client *kgo.Client) *Runner {
 	return &Runner{
 		limit:     limit,
 		interval:  interval,
 		store:     postgres.New(pool),
-		publisher: kafka.New(client, topic),
+		publisher: kafka.New(client),
 	}
 }
 

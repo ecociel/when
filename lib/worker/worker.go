@@ -54,7 +54,7 @@ func (w *Worker) Run(ctx context.Context) {
 			task := recToTask(record)
 			hdl, ok := w.handlers[task.Name]
 			if !ok {
-				log.Printf("Unkown task: %q", task.Name)
+				log.Printf("Unknown task: %q", task.Name)
 				return
 			}
 

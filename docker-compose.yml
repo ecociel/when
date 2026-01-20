@@ -73,26 +73,42 @@ services:
       - ./tmp/postgres_data:/var/lib/postgresql
       - ./init.sql:/docker-entrypoint-initdb.d/init.sql
 
+  standalone:
+    profiles: [standalone]
+    image: when-standalone
+    container_name: standalone
+    restart: no
+    environment:
+      - DB_CONNECTION_URI=postgres://postgres:postgres@postgres:5432/postgres
+      - QUEUE_HOST_PORTS=redpanda-0:9092
+      - TASKS_TOPIC=tasks
+      - TASKS_CONSUMER_GROUP=standalone-demo
+    depends_on:
+      postgres:
+        condition: service_started
   demo:
+    profiles: [seperate]
     image: when-demo
     container_name: demo
     restart: always
     environment:
       - DB_CONNECTION_URI=postgres://postgres:postgres@postgres:5432/postgres
       - QUEUE_HOST_PORTS=redpanda-0:9092
-      - EVENTS_TOPIC=events
-      - EVENTS_CONSUMER_GROUP=demo
+      - TASKS_TOPIC=events
+      - TASKS_CONSUMER_GROUP=demo
     depends_on:
       postgres:
         condition: service_started
   observer:
+    profiles: [seperate]
     image: when-observer
     container_name: observer
     restart: always
     environment:
       - DB_CONNECTION_URI=postgres://postgres:postgres@postgres:5432/postgres
       - QUEUE_HOST_PORTS=redpanda-0:9092
-      - EVENTS_TOPIC=events
+      - TASKS_TOPIC=events
+      - TASKS_CONSUMER_GROUP=demo
     depends_on:
       postgres:
         condition: service_started
